@@ -1,6 +1,6 @@
 {
   "name": "@sudobility/building_blocks_rn",
-  "version": "0.0.92",
+  "version": "0.0.93",
   "description": "Higher-level shared UI building blocks for Sudobility React Native apps",
   "type": "module",
   "main": "./dist/index.js",
