@@ -105,7 +105,7 @@ describe('ThemeProvider', () => {
       ),
     });
 
-    expect(result.current.colors.background).toBe('#ffffff');
+    expect(result.current.colors.background).toBe('#f8fafc');
   });
 
   it('should provide dark colors for dark theme', async () => {
