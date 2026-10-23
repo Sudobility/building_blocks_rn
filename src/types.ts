@@ -75,14 +75,7 @@ export interface FooterLinkItem {
  * Maps to numeric pixel values in RN.
  */
 export type MaxWidth =
-  | 'sm'
-  | 'md'
-  | 'lg'
-  | 'xl'
-  | '2xl'
-  | '4xl'
-  | '7xl'
-  | 'full';
+  'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl' | '7xl' | 'full';
 
 /**
  * Content padding options.

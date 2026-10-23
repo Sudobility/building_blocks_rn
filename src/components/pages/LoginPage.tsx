@@ -44,13 +44,7 @@ export type AuthErrorInfo = LoginViewError;
  * mapped to the same design token.
  */
 export type LoginPageColorVariant =
-  | 'primary'
-  | 'blue'
-  | 'indigo'
-  | 'violet'
-  | 'orange'
-  | 'emerald'
-  | 'rose';
+  'primary' | 'blue' | 'indigo' | 'violet' | 'orange' | 'emerald' | 'rose';
 
 /**
  * Text content for the LoginPage: the page's headings, and every string the
