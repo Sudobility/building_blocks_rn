@@ -12,7 +12,10 @@ const StyleSheet = {
 };
 
 const createMockComponent = (name: string) => {
-  const Component = (props: Record<string, any>) =>
+  // Strip `style`: these render as DOM elements under jsdom, and React 19.3's
+  // react-dom proxies the style object and rejects RN's array styles
+  // ("'set' on proxy: trap returned falsish"). Tests assert content, not style.
+  const Component = ({ style: _style, ...props }: Record<string, any>) =>
     React.createElement(name, props, props.children);
   Component.displayName = name;
   return Component;
@@ -65,7 +68,7 @@ export const SafeAreaView = createMockComponent('SafeAreaView');
 export const ActivityIndicator = createMockComponent('ActivityIndicator');
 export const KeyboardAvoidingView = createMockComponent('KeyboardAvoidingView');
 
-export const Modal = (props: Record<string, any>) => {
+export const Modal = ({ style: _style, ...props }: Record<string, any>) => {
   if (!props.visible) return null;
   return React.createElement('Modal', props, props.children);
 };
