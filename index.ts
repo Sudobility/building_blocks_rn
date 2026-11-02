@@ -11,13 +11,9 @@ export * from './src/components/empty-state';
 export { SudobilityAppRN } from './src/app/SudobilityAppRN';
 export type { SudobilityAppRNProps } from './src/app/SudobilityAppRN';
 
-// Subscription components without auth dependency
-export {
-  SafeSubscriptionContext,
-  STUB_SUBSCRIPTION_VALUE,
-  useSafeSubscription,
-} from './src/components/subscription/SafeSubscriptionContext';
-export type { SubscriptionContextValue } from './src/components/subscription/SafeSubscriptionContext';
+// SafeSubscriptionContext moved to @sudobility/subscription_pages_rn so this
+// package keeps no subscription code (RN mirror of the web building_blocks /
+// subscription_pages split).
 
 // Theme
 export * from './src/theme';

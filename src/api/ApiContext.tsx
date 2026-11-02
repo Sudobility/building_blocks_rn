@@ -9,28 +9,14 @@
  * Exports dual hooks: `useApi()` (throws if no provider) and `useApiSafe()` (returns null).
  */
 import React, { createContext, useContext, useMemo } from 'react';
+// Use the shared platform NetworkClient so this context is interchangeable with
+// the web building_blocks ApiProvider and accepted by @sudobility/entity_client's
+// EntityClient. The default fetch client below is cast to it (same approach as
+// the web ApiProvider): a real, injected networkClient is what entity/API
+// features use at runtime.
+import type { NetworkClient } from '@sudobility/types';
 
-export interface NetworkClient {
-  request: <T>(url: string, options?: RequestInit) => Promise<T>;
-  get: <T>(
-    url: string,
-    options?: Omit<RequestInit, 'method' | 'body'>
-  ) => Promise<T>;
-  post: <T>(
-    url: string,
-    body?: unknown,
-    options?: Omit<RequestInit, 'method'>
-  ) => Promise<T>;
-  put: <T>(
-    url: string,
-    body?: unknown,
-    options?: Omit<RequestInit, 'method'>
-  ) => Promise<T>;
-  delete: <T>(
-    url: string,
-    options?: Omit<RequestInit, 'method' | 'body'>
-  ) => Promise<T>;
-}
+export type { NetworkClient };
 
 export interface ApiContextValue {
   /** Network client for making API requests */
@@ -82,7 +68,11 @@ function createDefaultNetworkClient(): NetworkClient {
     return json as T;
   }
 
-  return {
+  // The default fetch client uses RequestInit/raw-JSON semantics, which differ
+  // from @sudobility/types' NetworkRequestOptions/NetworkResponse. It is cast to
+  // the shared interface (same as the web ApiProvider) and is a best-effort
+  // fallback; apps that use entity/API features inject a real NetworkClient.
+  const client = {
     request: makeRequest,
     get: <T,>(url: string, options?: Omit<RequestInit, 'method' | 'body'>) =>
       makeRequest<T>(url, { ...options, method: 'GET' }),
@@ -109,6 +99,8 @@ function createDefaultNetworkClient(): NetworkClient {
     delete: <T,>(url: string, options?: Omit<RequestInit, 'method' | 'body'>) =>
       makeRequest<T>(url, { ...options, method: 'DELETE' }),
   };
+
+  return client as unknown as NetworkClient;
 }
 
 export function ApiProvider({
