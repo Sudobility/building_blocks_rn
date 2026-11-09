@@ -7,8 +7,9 @@
 
 Higher-level shared UI building blocks for Sudobility React Native apps — the RN
 counterpart to `@sudobility/building_blocks` (web). Pre-built screens (login,
-settings, subscriptions, legal text), the theme system, i18n, toast, the app
-shell and layout primitives, consumed by downstream apps. BUSL-1.1, ESM
+settings, legal/text), the theme system, i18n, toast, the app
+shell and layout primitives, consumed by downstream apps. Subscription screens
+now live in `@sudobility/subscription_pages_rn` — none ship here. BUSL-1.1, ESM
 (`"type": "module"`), Bun only (never npm). TS strict, bundler resolution,
 `@/*` → `./src/*`. Build output is `dist/` (JS + `.d.ts`), committed for
 consumers.
@@ -25,7 +26,7 @@ Split so apps that do not use Firebase never pull it in, enforced at the
 
 - `@sudobility/building_blocks_rn` (`index.ts`) — everything with zero Firebase
   dependency: components, pages, `SudobilityAppRN`, theme, i18n, toast,
-  subscription UI, constants, hooks.
+  constants, hooks.
 - `@sudobility/building_blocks_rn/firebase` (`firebase.ts`) —
   `SudobilityAppRNWithFirebaseAuth`, `ApiProvider`/`useApi`/`useApiSafe`.
 
@@ -44,8 +45,8 @@ Split so apps that do not use Firebase never pull it in, enforced at the
 ## Conventions
 
 - **Dual hooks per context.** `useX()` throws when its provider is missing;
-  `useXSafe()` returns `null`. Exception: `useSafeSubscription()` returns a stub
-  (`isSubscribed: false`), never throws.
+  `useXSafe()` returns `null` (e.g. `useTheme`/`useThemeSafe`,
+  `useApi`/`useApiSafe`).
 - **Themed styling is `createThemedStyles(colors => …)`** (`src/utils/styles.ts`),
   never bare `StyleSheet.create` — it memoizes per theme and recomputes on a
   theme switch. Every component uses it. Theme colours come from `useTheme()`.
@@ -107,9 +108,9 @@ Split so apps that do not use Firebase never pull it in, enforced at the
 - `src/app/` — `SudobilityAppRN` and the Firebase-aware wrapper.
 - `src/api/` — `ApiProvider` + `NetworkClient` + `useApi` (firebase entry only).
 - `src/components/` — `header`, `footer`, `layout`, `pages` (`LoginPage`,
-  `AppTextScreen`, `AppSubscriptionPage`), `settings` (`AppearanceSettings`,
-  `LanguagePicker`, `SettingsListScreen`), `subscription`, `toast`,
-  `bottom-action-bar`, `empty-state`, `error` (`ErrorBoundary`).
+  `AppTextScreen`), `settings` (`AppearanceSettings`, `LanguagePicker`,
+  `SettingsListScreen`), `toast`, `bottom-action-bar`, `empty-state`,
+  `error` (`ErrorBoundary`).
 - `src/theme/` — `ThemeContext`, `colors` (Tailwind-mirrored palette,
   `ThemeColors`), `spacing`, `typography`.
 - `src/hooks/` — `useResponsive`, device-layout hooks.
