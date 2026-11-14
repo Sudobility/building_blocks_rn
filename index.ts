@@ -6,6 +6,7 @@ export * from './src/components/layout';
 export * from './src/components/settings';
 export * from './src/components/pages';
 export * from './src/components/empty-state';
+export * from './src/components/auth';
 
 // App wrapper without auth dependency
 export { SudobilityAppRN } from './src/app/SudobilityAppRN';
