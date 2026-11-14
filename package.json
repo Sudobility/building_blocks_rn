@@ -1,6 +1,6 @@
 {
   "name": "@sudobility/building_blocks_rn",
-  "version": "0.0.122",
+  "version": "0.0.123",
   "description": "Higher-level shared UI building blocks for Sudobility React Native apps",
   "type": "module",
   "main": "./dist/index.js",
@@ -55,7 +55,7 @@
     "@sudobility/types": "^1.10.1",
     "react-native-localize": ">=3.0.0",
     "react-native-in-app-review": ">=4.4.2",
-    "@sudobility/components-rn": "^1.0.156"
+    "@sudobility/components-rn": "^1.0.157"
   },
   "peerDependenciesMeta": {
     "firebase": {
@@ -86,7 +86,7 @@
     "@react-navigation/bottom-tabs": "~7.21.0",
     "@react-navigation/native": "~7.5.1",
     "@react-navigation/native-stack": "~7.21.0",
-    "@sudobility/components-rn": "^1.0.156",
+    "@sudobility/components-rn": "^1.0.157",
     "@sudobility/types": "^1.10.1",
     "@tanstack/react-query": "~5.104.5",
     "@types/react": "~19.3.0",
