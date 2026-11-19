@@ -1,38 +1,100 @@
 /**
- * @fileoverview App header bar component for React Native.
+ * @fileoverview App header bar component for React Native — the counterpart
+ * of `AppTopBar` in `@sudobility/building_blocks`.
  *
- * Renders a row with a left section (logo + app name) and a right section
- * (icon buttons from `menuItems`). Both sections can be overridden via
- * `renderLeft` and `renderRight` props. Also provides a
- * `createAppHeaderOptions()` helper for React Navigation integration.
+ * The web's sections in the web's order: the logo and app name on the left,
+ * an optional center section, then the actions on the right — the menu items,
+ * the language selector and the account section. A phone header has no room
+ * for a row of labelled links, so the menu items are icon buttons, and there
+ * is no hamburger menu or sticky positioning (a screen's navigation is its tab
+ * bar and stack).
+ *
+ * Also provides `AppHeaderWithFirebaseAuth` (the web's
+ * `AppTopBarWithFirebaseAuth`) and a `createAppHeaderOptions()` helper for
+ * React Navigation integration.
  */
-import React from 'react';
+import React, { type ComponentType } from 'react';
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
-import type { MenuItemConfig, LogoConfig } from '../../types';
-import { useTheme } from '../../theme/ThemeContext';
+import type { MenuItemConfig, LogoConfig, LanguageConfig } from '../../types';
+import { useThemeColors } from '../../theme/ThemeContext';
+import {
+  LanguageSelector,
+  type LanguageSelectorProps,
+} from '../settings/LanguagePicker';
+import type { AuthActionProps, AuthMenuItem } from './AuthAction';
 
 export interface AppHeaderProps {
   /** Logo configuration */
   logo: LogoConfig;
   /** Menu items (shown as icon buttons on the right) */
   menuItems?: MenuItemConfig[];
-  /** Optional left section (e.g., back button) */
+  /** Available languages for selector (defaults to the built-in languages) */
+  languages?: LanguageConfig[];
+  /** Current language code */
+  currentLanguage?: string;
+  /**
+   * Language change handler. The language selector is shown when this is
+   * given: without it the selector could change nothing.
+   */
+  onLanguageChange?: (languageCode: string) => void;
+  /** Hide language selector */
+  hideLanguageSelector?: boolean;
+  /** Language selector props override */
+  languageSelectorProps?: Partial<LanguageSelectorProps>;
+  /** Render prop for account/auth section (right side of the header) */
+  renderAccountSection?: () => React.ReactNode;
+  /** Render prop for center section (e.g., search bar) */
+  renderCenterSection?: () => React.ReactNode;
+  /** Optional left section (e.g., back button) — replaces the logo */
   renderLeft?: () => React.ReactNode;
-  /** Optional right section (e.g., profile icon, account button) */
+  /**
+   * Optional right section, after the account section. This package's earlier
+   * name for the account slot; `renderAccountSection` is the web's.
+   */
   renderRight?: () => React.ReactNode;
+  /** Accessibility label for the header (default: 'Main navigation') */
+  ariaLabel?: string;
   /** Custom style */
   style?: StyleProp<ViewStyle>;
+}
+
+function LogoMark({ logo }: { logo: LogoConfig }) {
+  const colors = useThemeColors();
+  return (
+    <>
+      {logo.source && (
+        <Image
+          source={logo.source}
+          style={styles.logoImage}
+          resizeMode='contain'
+          accessibilityLabel={logo.alt || logo.appName}
+        />
+      )}
+      <Text style={[styles.appName, { color: colors.text }]}>
+        {logo.appName}
+      </Text>
+    </>
+  );
 }
 
 export function AppHeader({
   logo,
   menuItems,
+  languages,
+  currentLanguage = 'en',
+  onLanguageChange,
+  hideLanguageSelector = false,
+  languageSelectorProps,
+  renderAccountSection,
+  renderCenterSection,
   renderLeft,
   renderRight,
+  ariaLabel = 'Main navigation',
   style,
 }: AppHeaderProps) {
-  const { colors } = useTheme();
+  const colors = useThemeColors();
+  const showLanguageSelector = !hideLanguageSelector && !!onLanguageChange;
 
   return (
     <View
@@ -42,7 +104,7 @@ export function AppHeader({
         style,
       ]}
       accessibilityRole='header'
-      accessibilityLabel={`${logo.appName} header`}
+      accessibilityLabel={ariaLabel}
     >
       <View style={styles.leftSection}>
         {renderLeft ? (
@@ -52,22 +114,16 @@ export function AppHeader({
             onPress={logo.onPress}
             style={styles.logoContainer}
             accessibilityRole='button'
-            accessibilityLabel={`${logo.appName} home`}
+            accessibilityLabel={logo.appName}
           >
-            {logo.source && (
-              <Image
-                source={logo.source}
-                style={styles.logoImage}
-                resizeMode='contain'
-                accessibilityLabel={`${logo.appName} logo`}
-              />
-            )}
-            <Text style={[styles.appName, { color: colors.text }]}>
-              {logo.appName}
-            </Text>
+            <LogoMark logo={logo} />
           </Pressable>
         )}
       </View>
+
+      {renderCenterSection && (
+        <View style={styles.centerSection}>{renderCenterSection()}</View>
+      )}
 
       <View style={styles.rightSection}>
         {menuItems
@@ -82,12 +138,96 @@ export function AppHeader({
                 accessibilityRole='button'
                 accessibilityLabel={item.label}
               >
-                <IconComponent size={22} color={colors.textSecondary} />
+                {IconComponent ? (
+                  <IconComponent size={22} color={colors.textSecondary} />
+                ) : (
+                  <Text style={[styles.menuLabel, { color: colors.text }]}>
+                    {item.label}
+                  </Text>
+                )}
               </Pressable>
             );
           })}
+        {showLanguageSelector && (
+          <LanguageSelector
+            languages={languages}
+            currentLanguage={currentLanguage}
+            onLanguageChange={onLanguageChange}
+            variant='compact'
+            {...languageSelectorProps}
+          />
+        )}
+        {renderAccountSection?.()}
         {renderRight?.()}
       </View>
+    </View>
+  );
+}
+
+export interface AppHeaderWithFirebaseAuthProps extends Omit<
+  AppHeaderProps,
+  'renderAccountSection'
+> {
+  /**
+   * The auth action component for the account section — typically made with
+   * `createAuthAction`. Passed in, as on the web, so the header depends on no
+   * auth provider.
+   */
+  AuthActionComponent: ComponentType<AuthActionProps>;
+  /** Additional menu items for authenticated users */
+  authenticatedMenuItems?: AuthMenuItem[];
+  /** Login button press handler */
+  onLoginPress?: () => void;
+  /** Avatar size in pixels */
+  avatarSize?: number;
+  /** Custom login button text */
+  loginButtonText?: string;
+}
+
+/**
+ * AppHeaderWithFirebaseAuth - the header with an auth action in its account
+ * section. The counterpart of the web's `AppTopBarWithFirebaseAuth`.
+ *
+ * @example
+ * ```tsx
+ * const AuthAction = createAuthAction({ useAuth });
+ *
+ * <AppHeaderWithFirebaseAuth
+ *   logo={{ appName: 'My App' }}
+ *   AuthActionComponent={AuthAction}
+ *   onLoginPress={() => navigation.navigate('Login')}
+ *   authenticatedMenuItems={[
+ *     { id: 'dashboard', label: 'Dashboard', onPress: openDashboard },
+ *   ]}
+ * />
+ * ```
+ */
+export function AppHeaderWithFirebaseAuth({
+  AuthActionComponent,
+  authenticatedMenuItems = [],
+  onLoginPress,
+  avatarSize = 32,
+  loginButtonText,
+  ...headerProps
+}: AppHeaderWithFirebaseAuthProps) {
+  const renderAccountSection = () => (
+    <AuthActionComponent
+      avatarSize={avatarSize}
+      onLoginPress={onLoginPress}
+      menuItems={authenticatedMenuItems}
+      loginButtonText={loginButtonText}
+    />
+  );
+
+  return (
+    <AppHeader {...headerProps} renderAccountSection={renderAccountSection} />
+  );
+}
+
+function HeaderTitle({ logo }: { logo: LogoConfig }) {
+  return (
+    <View style={styles.logoContainer}>
+      <LogoMark logo={logo} />
     </View>
   );
 }
@@ -102,18 +242,7 @@ export function createAppHeaderOptions(config: {
   renderRight?: () => React.ReactNode;
 }) {
   return {
-    headerTitle: () => (
-      <View style={styles.logoContainer}>
-        {config.logo.source && (
-          <Image
-            source={config.logo.source}
-            style={styles.logoImage}
-            resizeMode='contain'
-          />
-        )}
-        <Text style={styles.headerTitle}>{config.logo.appName}</Text>
-      </View>
-    ),
+    headerTitle: () => <HeaderTitle logo={config.logo} />,
     headerRight: config.renderRight
       ? () => <View style={styles.headerRightNav}>{config.renderRight!()}</View>
       : undefined,
@@ -133,6 +262,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+  },
+  centerSection: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
   },
   rightSection: {
     flexDirection: 'row',
@@ -160,9 +295,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  menuLabel: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   headerRightNav: {
     flexDirection: 'row',

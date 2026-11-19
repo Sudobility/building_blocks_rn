@@ -1,13 +1,13 @@
 /**
- * @fileoverview Empty state component for React Native.
+ * @fileoverview Empty state component for React Native — the counterpart of
+ * `EmptyState` in `@sudobility/building_blocks`.
  *
- * Displays a centered message with an optional primary action button. Useful
- * for screens or sections that have no data to show yet (e.g. empty lists).
- * Omit `buttonLabel`/`onPress` for a message-only placeholder.
+ * A centered, muted message above a primary action button. Use it when a list
+ * or screen has no content to display. Unlike the web's, the button is
+ * optional: omit `buttonLabel`/`onPress` for a message-only placeholder.
  */
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { colors as designColors } from '@sudobility/design';
 import { createThemedStyles } from '../../utils/styles';
 
 export interface EmptyStateProps {
@@ -55,11 +55,13 @@ const useStyles = createThemedStyles(colors => ({
     lineHeight: 22,
     color: colors.textSecondary,
   },
+  // The web's `mb-5` between the message and the button.
   messageWithButton: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
+  // The web's primary button: the theme's primary, not a fixed blue.
   button: {
-    backgroundColor: designColors.raw.blue[600],
+    backgroundColor: colors.primary,
     borderRadius: 6,
     minHeight: 44,
     paddingHorizontal: 24,
@@ -68,7 +70,7 @@ const useStyles = createThemedStyles(colors => ({
     justifyContent: 'center',
   },
   buttonText: {
-    color: designColors.raw.neutral[0],
+    color: colors.primaryForeground,
     fontSize: 14,
     fontWeight: '500',
   },

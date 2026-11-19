@@ -6,6 +6,13 @@
  * refresh. Uses a default fetch-based client with JSON content type, with support
  * for custom network client overrides.
  *
+ * The context value is the web `ApiProvider`'s. The provider is not: the web
+ * one subscribes to Firebase itself and builds a network client that attaches
+ * the ID token and refreshes it on a 401, while this one is handed the token,
+ * user id and (optionally) network client by the app, so this package takes no
+ * Firebase dependency. An app that wants authenticated requests through
+ * `networkClient` must pass one — the default fetch client sends no token.
+ *
  * Exports dual hooks: `useApi()` (throws if no provider) and `useApiSafe()` (returns null).
  */
 import React, { createContext, useContext, useMemo } from 'react';
@@ -33,6 +40,8 @@ export interface ApiContextValue {
   isLoading: boolean;
   /** Refresh the auth token */
   refreshToken?: () => Promise<string | null>;
+  /** Whether running in test/sandbox mode */
+  testMode: boolean;
 }
 
 const ApiContext = createContext<ApiContextValue | null>(null);
@@ -53,6 +62,8 @@ export interface ApiProviderProps {
   networkClient?: NetworkClient;
   /** Optional token refresh function */
   refreshToken?: () => Promise<string | null>;
+  /** Whether running in test/sandbox mode (optional). Defaults to false. */
+  testMode?: boolean;
 }
 
 function createDefaultNetworkClient(): NetworkClient {
@@ -112,6 +123,7 @@ export function ApiProvider({
   isLoading,
   networkClient,
   refreshToken,
+  testMode = false,
 }: ApiProviderProps) {
   const defaultClient = useMemo(() => createDefaultNetworkClient(), []);
 
@@ -124,6 +136,7 @@ export function ApiProvider({
       isReady,
       isLoading,
       refreshToken,
+      testMode,
     }),
     [
       networkClient,
@@ -134,6 +147,7 @@ export function ApiProvider({
       isReady,
       isLoading,
       refreshToken,
+      testMode,
     ]
   );
 

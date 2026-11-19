@@ -7,7 +7,7 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import type { ViewStyle, TextStyle, ImageStyle } from 'react-native';
-import { useTheme } from '../theme/ThemeContext';
+import { useThemeColors } from '../theme/ThemeContext';
 import type { ThemeColors } from '../theme/colors';
 
 type NamedStyles<T> = { [P in keyof T]: ViewStyle | TextStyle | ImageStyle };
@@ -17,7 +17,8 @@ type NamedStyles<T> = { [P in keyof T]: ViewStyle | TextStyle | ImageStyle };
  *
  * Returns a custom hook that, when called inside a component, produces
  * a memoized `StyleSheet` object derived from the current theme colors.
- * Styles recompute only when the theme changes (light/dark switch).
+ * Styles recompute only when the theme changes (light/dark switch). The hook
+ * works with or without a `ThemeProvider` (see `useThemeColors`).
  *
  * @param factory - Function that receives `ThemeColors` and returns a style object
  * @returns A React hook that returns the themed StyleSheet
@@ -39,7 +40,10 @@ export function createThemedStyles<T extends NamedStyles<T>>(
   factory: (colors: ThemeColors) => T
 ) {
   return function useStyles(): T {
-    const { colors } = useTheme();
+    // Not `useTheme()`: that throws without a ThemeProvider, and an app with a
+    // theme of its own (it never mounts ours) must still be able to render a
+    // building block.
+    const colors = useThemeColors();
     return useMemo(() => StyleSheet.create(factory(colors)), [colors]);
   };
 }

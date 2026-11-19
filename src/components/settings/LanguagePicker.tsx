@@ -1,17 +1,23 @@
 /**
- * @fileoverview Modal-based language selector for React Native.
+ * @fileoverview Language selector for React Native — the counterpart of
+ * `LanguageSelector` in `@sudobility/building_blocks`.
  *
- * Displays a trigger button showing the current language (flag + name) with
- * a dropdown chevron. Pressing the trigger opens a full-screen modal with a
- * FlatList of all available languages, each showing flag + name + checkmark
- * for the current selection.
+ * Same props and rules as the web: the languages are listed alphabetically by
+ * name, the current one falls back to the first when its code is unknown,
+ * choosing the language already in use changes nothing, and there are two
+ * variants — `compact` (flag, name and chevron, for a header) and `full` (a
+ * labelled field with a line of help, for a settings screen). The list opens
+ * in a modal where the web drops a menu down.
+ *
+ * `LanguagePicker` is this package's earlier name for the full variant; it is
+ * kept, and shows a label or help only when given one.
  *
  * @platform ios - Uses `presentationStyle="pageSheet"` for the modal, which
  *   presents as a card that can be swiped to dismiss (iOS 13+).
  * @platform android - Uses the default modal presentation (full-screen overlay).
  *   The `presentationStyle` prop is ignored on Android.
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -26,46 +32,79 @@ import type { LanguageConfig } from '../../constants/languages';
 import { DEFAULT_LANGUAGES } from '../../constants/languages';
 import { createThemedStyles } from '../../utils/styles';
 
-export interface LanguagePickerProps {
-  /** Available languages (default: DEFAULT_LANGUAGES) */
+export interface LanguageSelectorProps {
+  /** Available languages (defaults to the built-in languages) */
   languages?: LanguageConfig[];
-  /** Currently selected language code */
+  /** Current language code */
   currentLanguage?: string;
-  /** Called when a language is selected */
+  /** Language change handler */
   onLanguageChange?: (languageCode: string) => void;
-  /** Label displayed above the picker */
+  /** Variant: 'compact' for a header, 'full' for settings (default: 'compact') */
+  variant?: 'compact' | 'full';
+  /** Label text for full variant (default: 'Language') */
   label?: string;
+  /** Helper text for full variant (default: 'Select your preferred language') */
+  helperText?: string;
+  /** Title of the list of languages (default: the label, or 'Select language') */
+  modalTitle?: string;
+  /** Label of the button that closes the list (default: 'Done') */
+  doneLabel?: string;
   /** Custom style */
   style?: StyleProp<ViewStyle>;
 }
 
-export function LanguagePicker({
+/**
+ * Props for `LanguagePicker` — `LanguageSelector`'s, without the variant.
+ */
+export type LanguagePickerProps = Omit<LanguageSelectorProps, 'variant'>;
+
+function LanguageSelectorView({
   languages = DEFAULT_LANGUAGES,
   currentLanguage = 'en',
   onLanguageChange,
+  variant,
   label,
+  helperText,
+  modalTitle,
+  doneLabel = 'Done',
   style,
-}: LanguagePickerProps) {
+}: LanguageSelectorProps & { variant: 'compact' | 'full' }) {
   const styles = useStyles();
   const rtlText = useRTLTextStyle();
   const [modalVisible, setModalVisible] = useState(false);
 
-  const currentLang = languages.find(l => l.code === currentLanguage);
+  // Sort languages alphabetically by name
+  const sortedLanguages = useMemo(
+    () => [...languages].sort((a, b) => a.name.localeCompare(b.name)),
+    [languages]
+  );
+
+  const currentLang = useMemo(
+    () => languages.find(lang => lang.code === currentLanguage) || languages[0],
+    [languages, currentLanguage]
+  );
 
   const handleSelect = (code: string) => {
-    onLanguageChange?.(code);
+    if (code !== currentLanguage) {
+      onLanguageChange?.(code);
+    }
     setModalVisible(false);
   };
 
+  const compact = variant === 'compact';
+  const title = modalTitle ?? label ?? 'Select language';
+
   return (
     <View style={style}>
-      {label && <Text style={[styles.label, rtlText]}>{label}</Text>}
+      {!compact && label ? (
+        <Text style={[styles.label, rtlText]}>{label}</Text>
+      ) : null}
 
       <Pressable
-        style={styles.trigger}
+        style={compact ? styles.compactTrigger : styles.trigger}
         onPress={() => setModalVisible(true)}
         accessibilityRole='button'
-        accessibilityLabel={`${label ?? 'Language'}: ${currentLang?.name ?? currentLanguage}. Tap to change.`}
+        accessibilityLabel={`${label ?? 'Select language'}: ${currentLang?.name ?? currentLanguage}`}
       >
         <Text style={[styles.triggerText, rtlText]}>
           {currentLang
@@ -74,6 +113,10 @@ export function LanguagePicker({
         </Text>
         <Text style={styles.chevron}>{'\u25BC'}</Text>
       </Pressable>
+
+      {!compact && helperText ? (
+        <Text style={[styles.helperText, rtlText]}>{helperText}</Text>
+      ) : null}
 
       <Modal
         visible={modalVisible}
@@ -87,20 +130,21 @@ export function LanguagePicker({
               style={[styles.modalTitle, rtlText]}
               accessibilityRole='header'
             >
-              {label ?? 'Select Language'}
+              {title}
             </Text>
             <Pressable
               onPress={() => setModalVisible(false)}
               accessibilityRole='button'
-              accessibilityLabel='Done, close language picker'
+              accessibilityLabel={doneLabel}
             >
-              <Text style={styles.closeButton}>Done</Text>
+              <Text style={styles.closeButton}>{doneLabel}</Text>
             </Pressable>
           </View>
 
           <FlatList
-            data={languages}
+            data={sortedLanguages}
             keyExtractor={item => item.code}
+            accessibilityLabel='Languages'
             renderItem={({ item }) => (
               <Pressable
                 style={[
@@ -112,7 +156,7 @@ export function LanguagePicker({
                 accessibilityState={{
                   selected: item.code === currentLanguage,
                 }}
-                accessibilityLabel={`${item.name}${item.code === currentLanguage ? ', selected' : ''}`}
+                accessibilityLabel={item.name}
               >
                 <Text style={styles.flag}>{item.flag}</Text>
                 <Text style={[styles.languageName, rtlText]}>{item.name}</Text>
@@ -129,12 +173,73 @@ export function LanguagePicker({
   );
 }
 
+/**
+ * LanguageSelector - switch languages from a list.
+ *
+ * @example
+ * ```tsx
+ * // Compact variant for a header
+ * <LanguageSelector
+ *   currentLanguage="en"
+ *   onLanguageChange={code => i18n.changeLanguage(code)}
+ * />
+ *
+ * // Full variant for settings screens
+ * <LanguageSelector
+ *   currentLanguage="en"
+ *   onLanguageChange={code => i18n.changeLanguage(code)}
+ *   variant="full"
+ *   label="Language"
+ *   helperText="Select your preferred language"
+ * />
+ * ```
+ */
+export function LanguageSelector({
+  variant = 'compact',
+  label = 'Language',
+  helperText = 'Select your preferred language',
+  ...props
+}: LanguageSelectorProps) {
+  return (
+    <LanguageSelectorView
+      {...props}
+      variant={variant}
+      label={label}
+      helperText={helperText}
+    />
+  );
+}
+
+/**
+ * The full variant under this package's earlier name. Unlike
+ * `LanguageSelector` it has no default label or help: it shows them only when
+ * given, as it always has.
+ */
+export function LanguagePicker(props: LanguagePickerProps) {
+  return <LanguageSelectorView {...props} variant='full' />;
+}
+
 const useStyles = createThemedStyles(colors => ({
   label: {
     fontSize: 15,
     fontWeight: '500',
     color: colors.textSecondary,
     marginBottom: 8,
+  },
+  compactTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minHeight: 44,
+  },
+  helperText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 8,
   },
   trigger: {
     flexDirection: 'row',

@@ -100,13 +100,20 @@ function SignedOutNotice({
   }, [openSignIn, closeSignIn]);
 
   return (
-    <View style={styles.center} accessibilityLabel='signed-out-notice'>
-      {notice.title ? <Text style={styles.title}>{notice.title}</Text> : null}
-      <Text style={styles.body}>{notice.body}</Text>
+    <View style={styles.center} testID='signed-out-notice'>
+      {notice.title ? (
+        <Text style={styles.title} accessibilityRole='header'>
+          {notice.title}
+        </Text>
+      ) : null}
+      <Text style={[styles.body, notice.title ? styles.bodyAfterTitle : null]}>
+        {notice.body}
+      </Text>
       <Pressable
         onPress={() => openSignIn()}
         style={styles.button}
         accessibilityRole='button'
+        accessibilityLabel={notice.button}
       >
         <Text style={styles.buttonText}>{notice.button}</Text>
       </Pressable>
@@ -160,14 +167,18 @@ const useStyles = createThemedStyles(colors => ({
     paddingHorizontal: 24,
     paddingVertical: 48,
   },
+  // The web's `Heading size='2xl' weight='semibold'`.
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '600',
     color: colors.text,
     textAlign: 'center',
   },
-  body: {
+  // The web's `mt-3`, and only under a title.
+  bodyAfterTitle: {
     marginTop: 12,
+  },
+  body: {
     fontSize: 15,
     lineHeight: 22,
     color: colors.textSecondary,
@@ -175,13 +186,15 @@ const useStyles = createThemedStyles(colors => ({
   },
   button: {
     marginTop: 24,
+    minHeight: 44,
+    justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 10,
     backgroundColor: colors.primary,
   },
   buttonText: {
-    color: colors.invertedText,
+    color: colors.primaryForeground,
     fontSize: 15,
     fontWeight: '600',
   },

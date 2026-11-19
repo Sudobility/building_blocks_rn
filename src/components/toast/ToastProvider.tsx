@@ -32,7 +32,7 @@ import React, {
 import { View, Text, Animated, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors as designColors } from '@sudobility/design';
-import { useTheme } from '../../theme/ThemeContext';
+import { useThemeColors } from '../../theme/ThemeContext';
 import { createThemedStyles } from '../../utils/styles';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -120,7 +120,7 @@ function ToastItem({
   toast: Toast;
   onDismiss: () => void;
 }) {
-  const { colors } = useTheme();
+  const colors = useThemeColors();
   const styles = useToastStyles();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-20)).current;

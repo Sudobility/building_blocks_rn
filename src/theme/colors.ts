@@ -2,11 +2,18 @@
  * @fileoverview Color palette and theme color definitions for React Native.
  *
  * Defines the color palette (matching Tailwind CSS color tokens), the
- * `ThemeColors` interface (20 properties), and both light and dark theme
- * color objects. Light mode uses white/light-gray surfaces; dark mode uses
- * gray-800/900 surfaces with inverted text colors.
+ * `ThemeColors` interface, and the light and dark theme color objects.
+ *
+ * The web package has no palette of its own: its components carry Tailwind
+ * token classes (`bg-primary`, `text-muted-foreground`) that resolve against
+ * whatever `@sudobility/design` theme the host configured. `getThemeColors()`
+ * is the same thing for StyleSheet styles — it reads the theme the host passed
+ * to `configureTheme()`, so a building block draws the host's primary rather
+ * than the default theme's.
  */
 
+import { getActiveTheme } from '@sudobility/design';
+import type { ThemeTokens } from '@sudobility/design';
 import { defaultTheme } from '@sudobility/design/themes';
 
 /**
@@ -17,7 +24,7 @@ import { defaultTheme } from '@sudobility/design/themes';
  * rather than hardcoded.
  */
 function hslToHex(token: string, lOverride?: number): string {
-  const [h, s, l] = token.replace(/%/g, '').trim().split(/\s+/).map(Number);
+  const [h, s, l] = token.replace(/%|deg/g, '').trim().split(/\s+/).map(Number);
   const L = (lOverride ?? l) / 100;
   const S = s / 100;
   const a = S * Math.min(L, 1 - L);
@@ -31,10 +38,9 @@ function hslToHex(token: string, lOverride?: number): string {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
-// Theme colors are derived from @sudobility/design's default theme so the RN
-// library follows the design system instead of a local hardcoded palette.
+// The palette's semantic singles are the default design theme's; the live
+// theme colours (`getThemeColors`) follow whichever theme the host configured.
 const L = defaultTheme.light;
-const D = defaultTheme.dark;
 
 export const palette = {
   // Numeric primary/gray scales are a raw Tailwind reference ramp kept for
@@ -77,6 +83,8 @@ export const palette = {
 
 export interface ThemeColors {
   primary: string;
+  /** Text and icons drawn on `primary` (a primary button's label). */
+  primaryForeground: string;
   background: string;
   card: string;
   text: string;
@@ -93,50 +101,101 @@ export interface ThemeColors {
   successText: string;
   warning: string;
   info: string;
+  /** The info alert's fill — the web's `bg-info/10`. */
+  infoBg: string;
+  /** The info alert's border — the web's `border-info/30`. */
+  infoBorder: string;
   invertedText: string;
   invertedBackground: string;
 }
 
-export const lightColors: ThemeColors = {
-  primary: hslToHex(L.primary),
-  background: hslToHex(L.background),
-  card: hslToHex(L.card),
-  text: hslToHex(L.foreground),
-  textSecondary: hslToHex(L.mutedForeground),
-  textMuted: hslToHex(L.mutedForeground, 60),
-  border: hslToHex(L.border),
-  notification: hslToHex(L.destructive),
-  surface: hslToHex(L.card),
-  surfaceSecondary: hslToHex(L.muted),
-  error: hslToHex(L.destructive),
-  errorBg: hslToHex(L.destructive, 96),
-  success: hslToHex(L.success),
-  successBg: hslToHex(L.success, 92),
-  successText: hslToHex(L.success),
-  warning: hslToHex(L.warning),
-  info: hslToHex(L.info),
-  invertedText: hslToHex(D.foreground),
-  invertedBackground: hslToHex(D.background),
-};
+/** A design-system theme's two palettes — all `getThemeColors` reads of one. */
+type ThemePalettes = { light: ThemeTokens; dark: ThemeTokens };
 
-export const darkColors: ThemeColors = {
-  primary: hslToHex(D.primary),
-  background: hslToHex(D.background),
-  card: hslToHex(D.card),
-  text: hslToHex(D.foreground),
-  textSecondary: hslToHex(D.mutedForeground),
-  textMuted: hslToHex(D.mutedForeground, 50),
-  border: hslToHex(D.border),
-  notification: hslToHex(D.destructive),
-  surface: hslToHex(D.card),
-  surfaceSecondary: hslToHex(D.muted),
-  error: hslToHex(D.destructive),
-  errorBg: hslToHex(D.destructive, 14),
-  success: hslToHex(D.success),
-  successBg: hslToHex(D.success, 14),
-  successText: hslToHex(D.success, 70),
-  warning: hslToHex(D.warning),
-  info: hslToHex(D.info),
-  invertedText: hslToHex(L.foreground),
-  invertedBackground: hslToHex(L.background),
-};
+/** `#rrggbb` with an alpha channel appended, like a Tailwind `/10` modifier. */
+function withAlpha(hex: string, alpha: number): string {
+  const channel = Math.round(Math.max(0, Math.min(1, alpha)) * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return `${hex}${channel}`;
+}
+
+/**
+ * The colours of one scheme of a design-system theme. A token the theme leaves
+ * out falls back to the default theme's, so a partial theme draws rather than
+ * throws.
+ */
+function buildThemeColors(
+  scheme: 'light' | 'dark',
+  theme: ThemePalettes
+): ThemeColors {
+  const dark = scheme === 'dark';
+  const token = (from: 'light' | 'dark', key: keyof ThemeTokens): string =>
+    theme[from]?.[key] ?? defaultTheme[from][key] ?? defaultTheme.light[key]!;
+  const own = (key: keyof ThemeTokens, l?: number) =>
+    hslToHex(token(scheme, key), l);
+  const other = (key: keyof ThemeTokens) =>
+    hslToHex(token(dark ? 'light' : 'dark', key));
+
+  return {
+    primary: own('primary'),
+    primaryForeground: own('primaryForeground'),
+    background: own('background'),
+    card: own('card'),
+    text: own('foreground'),
+    textSecondary: own('mutedForeground'),
+    textMuted: own('mutedForeground', dark ? 50 : 60),
+    border: own('border'),
+    notification: own('destructive'),
+    surface: own('card'),
+    surfaceSecondary: own('muted'),
+    error: own('destructive'),
+    errorBg: own('destructive', dark ? 14 : 96),
+    success: own('success'),
+    successBg: own('success', dark ? 14 : 92),
+    successText: dark ? own('success', 70) : own('success'),
+    warning: own('warning'),
+    info: own('info'),
+    infoBg: withAlpha(own('info'), 0.1),
+    infoBorder: withAlpha(own('info'), 0.3),
+    invertedText: other('foreground'),
+    invertedBackground: other('background'),
+  };
+}
+
+/** The default design theme's light palette. */
+export const lightColors: ThemeColors = buildThemeColors('light', defaultTheme);
+
+/** The default design theme's dark palette. */
+export const darkColors: ThemeColors = buildThemeColors('dark', defaultTheme);
+
+const paletteCache = new WeakMap<
+  object,
+  { light: ThemeColors; dark: ThemeColors }
+>();
+
+/**
+ * The colours for `scheme` in the host's active `@sudobility/design` theme —
+ * the one it passed to `configureTheme()` — or in the default theme when none
+ * is configured (or the design system is a test stub without
+ * `getActiveTheme`). Answers the same object for the same theme and scheme, so
+ * it is safe as a memo dependency.
+ */
+export function getThemeColors(scheme: 'light' | 'dark'): ThemeColors {
+  const active =
+    typeof getActiveTheme === 'function'
+      ? (getActiveTheme() as ThemePalettes | null)
+      : null;
+  if (!active || active === (defaultTheme as ThemePalettes)) {
+    return scheme === 'dark' ? darkColors : lightColors;
+  }
+  let palettes = paletteCache.get(active);
+  if (!palettes) {
+    palettes = {
+      light: buildThemeColors('light', active),
+      dark: buildThemeColors('dark', active),
+    };
+    paletteCache.set(active, palettes);
+  }
+  return palettes[scheme];
+}

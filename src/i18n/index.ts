@@ -95,6 +95,13 @@ export function initializeI18nRN(config: I18nConfig = {}): typeof i18n {
 }
 
 /**
+ * The web package's name for {@link initializeI18nRN}: the same call sets up
+ * i18n on either platform. Here the translations are bundled (`resources`)
+ * where the web loads them over HTTP (`loadPath`).
+ */
+export const initializeI18n = initializeI18nRN;
+
+/**
  * Get the i18n instance.
  * Initializes with defaults if not already initialized.
  */

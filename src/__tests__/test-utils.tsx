@@ -146,6 +146,13 @@ function getDirectTextContent(el: HTMLElement): string {
 
 interface RenderResult {
   container: HTMLElement;
+  /** The element a component marked with `testID`. Throws if there is none. */
+  getByTestId: (testId: string) => HTMLElement;
+  queryByTestId: (testId: string) => HTMLElement | null;
+  /** The element a component gave this accessibility label. */
+  getByLabel: (label: string) => HTMLElement;
+  /** Render a new element into the same root (an update, not a remount). */
+  rerender: (element: React.ReactElement) => Promise<void>;
   getByText: (text: string) => HTMLElement;
   queryByText: (text: string | RegExp) => HTMLElement | null;
   getAllByText: (text: string | RegExp) => HTMLElement[];
@@ -187,8 +194,39 @@ export async function render(
     return findByTextContent(container, text);
   };
 
+  const queryByTestId = (testId: string): HTMLElement | null =>
+    container.querySelector(`[data-testid="${testId}"]`);
+
+  const getByTestId = (testId: string): HTMLElement => {
+    const found = queryByTestId(testId);
+    if (!found) {
+      throw new Error(`testID "${testId}" not found`);
+    }
+    return found;
+  };
+
+  const getByLabel = (label: string): HTMLElement => {
+    const found = container.querySelector<HTMLElement>(
+      `[aria-label="${label}"]`
+    );
+    if (!found) {
+      throw new Error(`Accessibility label "${label}" not found`);
+    }
+    return found;
+  };
+
+  const rerender = async (next: React.ReactElement): Promise<void> => {
+    await reactAct(async () => {
+      root.render(next);
+    });
+  };
+
   return {
     container,
+    getByTestId,
+    queryByTestId,
+    getByLabel,
+    rerender,
     getByText,
     queryByText,
     getAllByText,

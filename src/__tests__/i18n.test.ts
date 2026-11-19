@@ -80,4 +80,10 @@ describe('i18n', () => {
     const mod = await import('../i18n/index');
     expect(mod.i18n).toBeDefined();
   });
+
+  it("answers to the web package's name too", async () => {
+    const { initializeI18n, initializeI18nRN } = await import('../i18n/index');
+
+    expect(initializeI18n).toBe(initializeI18nRN);
+  });
 });

@@ -1,10 +1,13 @@
 /**
- * @fileoverview Appearance settings component for React Native.
+ * @fileoverview Appearance settings for React Native — the counterpart of
+ * `AppearanceSettings` in `@sudobility/building_blocks`.
  *
- * Provides segmented controls for theme (Light/Dark/System) and font size
- * (Small/Medium/Large). Accepts an optional translation function `t(key, fallback)`
- * for i18n support. If not provided, English fallback strings are used.
- * An optional info box can be displayed explaining that preferences are stored locally.
+ * The web's sections in the web's order and wording: the heading and its
+ * description, the theme setting and the font size setting (each a label, the
+ * choices, and a line of help), and the "About Settings" information box. The
+ * choices are a segmented control where the web has a dropdown; the
+ * translation keys are the web's (`AppearanceSettingsTranslations`), so one set
+ * of translations serves both.
  */
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
@@ -12,49 +15,100 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { Theme, FontSize } from '../../types';
 import { createThemedStyles } from '../../utils/styles';
 
+/**
+ * Translation keys used by AppearanceSettings — the web's, key for key.
+ * Provide a translation function to customize labels.
+ */
+export interface AppearanceSettingsTranslations {
+  heading: string;
+  description: string;
+  themeLabel: string;
+  /** Unused here: a segmented control has no placeholder. Kept for parity. */
+  themeSelectPlaceholder: string;
+  themeLight: string;
+  themeDark: string;
+  themeSystem: string;
+  themeDescription: string;
+  fontSizeLabel: string;
+  /** Unused here: a segmented control has no placeholder. Kept for parity. */
+  fontSizeSelectPlaceholder: string;
+  fontSizeSmall: string;
+  fontSizeMedium: string;
+  fontSizeLarge: string;
+  fontSizeDescription: string;
+  infoHeading: string;
+  infoDescription: string;
+}
+
+const defaultTranslations: AppearanceSettingsTranslations = {
+  heading: 'Appearance',
+  description: 'Customize the look and feel of the application.',
+  themeLabel: 'Theme',
+  themeSelectPlaceholder: 'Select theme',
+  themeLight: 'Light',
+  themeDark: 'Dark',
+  themeSystem: 'System',
+  themeDescription: 'Choose your preferred color theme.',
+  fontSizeLabel: 'Font Size',
+  fontSizeSelectPlaceholder: 'Select font size',
+  fontSizeSmall: 'Small',
+  fontSizeMedium: 'Medium',
+  fontSizeLarge: 'Large',
+  fontSizeDescription: 'Adjust the text size for better readability.',
+  infoHeading: 'About Settings',
+  infoDescription:
+    'Your appearance preferences are saved locally and will be applied automatically on your next visit.',
+};
+
 export interface AppearanceSettingsProps {
+  /** Current theme value */
   theme: Theme | string;
+  /** Current font size value */
   fontSize: FontSize | string;
+  /** Callback when theme changes */
   onThemeChange: (theme: Theme) => void;
+  /** Callback when font size changes */
   onFontSizeChange: (fontSize: FontSize) => void;
-  /** Optional translation function */
+  /**
+   * Optional translation function. Called with a key from
+   * `AppearanceSettingsTranslations` and its English fallback, as on the web.
+   */
   t?: (key: string, fallback?: string) => string;
+  /** Optional style for the container */
   style?: StyleProp<ViewStyle>;
+  /** Whether to show the information box at the bottom (default: true) */
   showInfoBox?: boolean;
 }
 
-const THEME_OPTIONS = [
-  {
-    value: Theme.LIGHT,
-    labelKey: 'appearance.theme.light',
-    fallback: 'Light',
-  },
-  { value: Theme.DARK, labelKey: 'appearance.theme.dark', fallback: 'Dark' },
-  {
-    value: Theme.SYSTEM,
-    labelKey: 'appearance.theme.system',
-    fallback: 'System',
-  },
+type TranslationKey = keyof AppearanceSettingsTranslations;
+
+const THEME_OPTIONS: Array<{ value: Theme; labelKey: TranslationKey }> = [
+  { value: Theme.LIGHT, labelKey: 'themeLight' },
+  { value: Theme.DARK, labelKey: 'themeDark' },
+  { value: Theme.SYSTEM, labelKey: 'themeSystem' },
 ];
 
-const FONT_SIZE_OPTIONS = [
-  {
-    value: FontSize.SMALL,
-    labelKey: 'appearance.fontSize.small',
-    fallback: 'Small',
-  },
-  {
-    value: FontSize.MEDIUM,
-    labelKey: 'appearance.fontSize.medium',
-    fallback: 'Medium',
-  },
-  {
-    value: FontSize.LARGE,
-    labelKey: 'appearance.fontSize.large',
-    fallback: 'Large',
-  },
-];
+const FONT_SIZE_OPTIONS: Array<{ value: FontSize; labelKey: TranslationKey }> =
+  [
+    { value: FontSize.SMALL, labelKey: 'fontSizeSmall' },
+    { value: FontSize.MEDIUM, labelKey: 'fontSizeMedium' },
+    { value: FontSize.LARGE, labelKey: 'fontSizeLarge' },
+  ];
 
+/**
+ * AppearanceSettings - theme and font size settings.
+ *
+ * @example
+ * ```tsx
+ * <AppearanceSettings
+ *   theme={theme}
+ *   fontSize={fontSize}
+ *   onThemeChange={setTheme}
+ *   onFontSizeChange={setFontSize}
+ *   t={(key, fallback) => t(`appearance.${key}`, fallback)}
+ * />
+ * ```
+ */
 export function AppearanceSettings({
   theme,
   fontSize,
@@ -62,92 +116,85 @@ export function AppearanceSettings({
   onFontSizeChange,
   t,
   style,
-  showInfoBox = false,
+  showInfoBox = true,
 }: AppearanceSettingsProps) {
   const styles = useStyles();
-  const translate = (key: string, fallback: string) =>
-    t?.(key, fallback) ?? fallback;
+  // Helper to get translated string with fallback
+  const getText = (key: TranslationKey): string => {
+    const fallback = defaultTranslations[key];
+    return t ? (t(key, fallback) ?? fallback) : fallback;
+  };
+
+  const segmented = <V extends string>(
+    label: string,
+    options: Array<{ value: V; labelKey: TranslationKey }>,
+    selected: string,
+    onChange: (value: V) => void
+  ) => (
+    <View
+      style={styles.segmentedControl}
+      accessibilityRole='radiogroup'
+      accessibilityLabel={label}
+    >
+      {options.map(option => {
+        const isSelected = selected === option.value;
+        const optionLabel = getText(option.labelKey);
+        return (
+          <Pressable
+            key={option.value}
+            style={[styles.segment, isSelected && styles.segmentActive]}
+            onPress={() => onChange(option.value)}
+            accessibilityRole='radio'
+            accessibilityState={{ selected: isSelected }}
+            accessibilityLabel={optionLabel}
+          >
+            <Text
+              style={[
+                styles.segmentText,
+                isSelected && styles.segmentTextActive,
+              ]}
+            >
+              {optionLabel}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
 
   return (
     <View style={[styles.container, style]}>
-      <Text style={styles.heading} accessibilityRole='header'>
-        {translate('appearance.title', 'Appearance')}
-      </Text>
-
-      {/* Theme selector */}
-      <Text style={styles.label}>
-        {translate('appearance.theme.label', 'Theme')}
-      </Text>
-      <View
-        style={styles.segmentedControl}
-        accessibilityRole='radiogroup'
-        accessibilityLabel={translate('appearance.theme.label', 'Theme')}
-      >
-        {THEME_OPTIONS.map(option => {
-          const isSelected = theme === option.value;
-          return (
-            <Pressable
-              key={option.value}
-              style={[styles.segment, isSelected && styles.segmentActive]}
-              onPress={() => onThemeChange(option.value)}
-              accessibilityRole='radio'
-              accessibilityState={{ selected: isSelected }}
-              accessibilityLabel={translate(option.labelKey, option.fallback)}
-            >
-              <Text
-                style={[
-                  styles.segmentText,
-                  isSelected && styles.segmentTextActive,
-                ]}
-              >
-                {translate(option.labelKey, option.fallback)}
-              </Text>
-            </Pressable>
-          );
-        })}
+      <View>
+        <Text style={styles.heading} accessibilityRole='header'>
+          {getText('heading')}
+        </Text>
+        <Text style={styles.description}>{getText('description')}</Text>
       </View>
 
-      {/* Font size selector */}
-      <Text style={[styles.label, { marginTop: 20 }]}>
-        {translate('appearance.fontSize.label', 'Font Size')}
-      </Text>
-      <View
-        style={styles.segmentedControl}
-        accessibilityRole='radiogroup'
-        accessibilityLabel={translate('appearance.fontSize.label', 'Font Size')}
-      >
-        {FONT_SIZE_OPTIONS.map(option => {
-          const isSelected = fontSize === option.value;
-          return (
-            <Pressable
-              key={option.value}
-              style={[styles.segment, isSelected && styles.segmentActive]}
-              onPress={() => onFontSizeChange(option.value)}
-              accessibilityRole='radio'
-              accessibilityState={{ selected: isSelected }}
-              accessibilityLabel={translate(option.labelKey, option.fallback)}
-            >
-              <Text
-                style={[
-                  styles.segmentText,
-                  isSelected && styles.segmentTextActive,
-                ]}
-              >
-                {translate(option.labelKey, option.fallback)}
-              </Text>
-            </Pressable>
-          );
-        })}
+      {/* Theme Setting */}
+      <View style={styles.setting}>
+        <Text style={styles.label}>{getText('themeLabel')}</Text>
+        {segmented(getText('themeLabel'), THEME_OPTIONS, theme, onThemeChange)}
+        <Text style={styles.help}>{getText('themeDescription')}</Text>
       </View>
 
+      {/* Font Size Setting */}
+      <View style={styles.setting}>
+        <Text style={styles.label}>{getText('fontSizeLabel')}</Text>
+        {segmented(
+          getText('fontSizeLabel'),
+          FONT_SIZE_OPTIONS,
+          fontSize,
+          onFontSizeChange
+        )}
+        <Text style={styles.help}>{getText('fontSizeDescription')}</Text>
+      </View>
+
+      {/* Information Box */}
       {showInfoBox && (
         <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
-            {translate(
-              'appearance.infoBox',
-              'Your appearance preferences are stored locally on this device.'
-            )}
-          </Text>
+          <Text style={styles.infoHeading}>{getText('infoHeading')}</Text>
+          <Text style={styles.infoText}>{getText('infoDescription')}</Text>
         </View>
       )}
     </View>
@@ -155,20 +202,35 @@ export function AppearanceSettings({
 }
 
 const useStyles = createThemedStyles(colors => ({
+  // The web's `space-y-6`: 24 between the heading, each setting and the box.
   container: {
     padding: 16,
+    gap: 24,
   },
   heading: {
     fontSize: 20,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 20,
+    marginBottom: 8,
+  },
+  description: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+  },
+  // The web's `space-y-2`: 8 between a setting's label, control and help.
+  setting: {
+    gap: 8,
   },
   label: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '500',
+    color: colors.text,
+  },
+  help: {
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.textSecondary,
-    marginBottom: 8,
   },
   segmentedControl: {
     flexDirection: 'row',
@@ -182,7 +244,7 @@ const useStyles = createThemedStyles(colors => ({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 40,
+    minHeight: 44,
   },
   segmentActive: {
     backgroundColor: colors.card,
@@ -201,15 +263,23 @@ const useStyles = createThemedStyles(colors => ({
     color: colors.text,
     fontWeight: '600',
   },
+  // The web's info alert: info-tinted fill and border, info text.
   infoBox: {
-    marginTop: 20,
-    padding: 12,
-    backgroundColor: colors.surfaceSecondary,
+    padding: 16,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.infoBorder,
+    backgroundColor: colors.infoBg,
+  },
+  infoHeading: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.info,
+    marginBottom: 8,
   },
   infoText: {
-    fontSize: 13,
-    color: colors.textMuted,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.info,
   },
 }));

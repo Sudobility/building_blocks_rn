@@ -41,6 +41,57 @@ describe('SudobilityAppRN', () => {
     expect(getByText('Custom Theme Child')).toBeTruthy();
   });
 
+  it("accepts a ThemeProvider that is not this package's (the web prop name)", async () => {
+    // An app with a theme of its own passes that provider. The default
+    // ToastProvider under it must still draw, with no theme context of ours.
+    const AppTheme = ({ children }: { children: React.ReactNode }) => (
+      <>{children}</>
+    );
+
+    const { getByText } = await render(
+      <SudobilityAppRN ThemeProvider={AppTheme}>
+        <Text>App Theme Child</Text>
+      </SudobilityAppRN>
+    );
+
+    expect(getByText('App Theme Child')).toBeTruthy();
+  });
+
+  it('accepts a ToastProvider (the web prop name)', async () => {
+    const CustomToast = ({ children }: { children: React.ReactNode }) => (
+      <>
+        <Text>custom toast host</Text>
+        {children}
+      </>
+    );
+
+    const { getByText } = await render(
+      <SudobilityAppRN ToastProvider={CustomToast}>
+        <Text>Toast Child</Text>
+      </SudobilityAppRN>
+    );
+
+    expect(getByText('custom toast host')).toBeTruthy();
+    expect(getByText('Toast Child')).toBeTruthy();
+  });
+
+  it('shows LoadingFallback while a screen suspends', async () => {
+    const pending = new Promise<never>(() => {});
+    const Suspends = () => {
+      throw pending;
+    };
+    const Loading = () => <Text>Loading screen</Text>;
+
+    const { getByText, queryByText } = await render(
+      <SudobilityAppRN LoadingFallback={Loading}>
+        <Suspends />
+      </SudobilityAppRN>
+    );
+
+    expect(getByText('Loading screen')).toBeTruthy();
+    expect(queryByText('Oops!')).toBeNull();
+  });
+
   it('should accept custom ToastProviderComponent', async () => {
     const CustomToast = ({ children }: { children: React.ReactNode }) => (
       <>{children}</>

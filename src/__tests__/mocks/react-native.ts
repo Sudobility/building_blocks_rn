@@ -15,8 +15,29 @@ const createMockComponent = (name: string) => {
   // Strip `style`: these render as DOM elements under jsdom, and React 19.3's
   // react-dom proxies the style object and rejects RN's array styles
   // ("'set' on proxy: trap returned falsish"). Tests assert content, not style.
-  const Component = ({ style: _style, ...props }: Record<string, any>) =>
-    React.createElement(name, props, props.children);
+  //
+  // What a test finds and presses things by is given its DOM spelling:
+  // `onPress` is a click, `testID` a `data-testid`, the accessibility label and
+  // role their ARIA attributes.
+  const Component = ({
+    style: _style,
+    onPress,
+    testID,
+    accessibilityLabel,
+    accessibilityRole,
+    ...props
+  }: Record<string, any>) =>
+    React.createElement(
+      name,
+      {
+        ...props,
+        ...(onPress ? { onClick: onPress } : {}),
+        ...(testID ? { 'data-testid': testID } : {}),
+        ...(accessibilityLabel ? { 'aria-label': accessibilityLabel } : {}),
+        ...(accessibilityRole ? { role: accessibilityRole } : {}),
+      },
+      props.children
+    );
   Component.displayName = name;
   return Component;
 };
@@ -63,7 +84,25 @@ export const Pressable = createMockComponent('Pressable');
 export const TouchableOpacity = createMockComponent('TouchableOpacity');
 export const Image = createMockComponent('Image');
 export const ScrollView = createMockComponent('ScrollView');
-export const FlatList = createMockComponent('FlatList');
+/** Renders every item: a test of a list needs its rows. */
+export const FlatList = ({
+  data = [],
+  renderItem,
+  keyExtractor,
+  ListHeaderComponent,
+}: Record<string, any>) =>
+  React.createElement(
+    'FlatList',
+    null,
+    ListHeaderComponent,
+    (data as unknown[]).map((item, index) =>
+      React.createElement(
+        React.Fragment,
+        { key: keyExtractor ? keyExtractor(item, index) : index },
+        renderItem({ item, index })
+      )
+    )
+  );
 export const SafeAreaView = createMockComponent('SafeAreaView');
 export const ActivityIndicator = createMockComponent('ActivityIndicator');
 export const KeyboardAvoidingView = createMockComponent('KeyboardAvoidingView');
@@ -74,7 +113,11 @@ export const Modal = ({ style: _style, ...props }: Record<string, any>) => {
 };
 
 export const Linking = {
-  openURL: () => Promise.resolve(),
+  openURL: vi.fn(() => Promise.resolve()),
+};
+
+export const I18nManager = {
+  isRTL: false,
 };
 
 export const Platform = {

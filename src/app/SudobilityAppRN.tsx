@@ -1,12 +1,19 @@
 /**
- * @fileoverview Base app wrapper for Sudobility React Native apps.
+ * @fileoverview Base app wrapper for Sudobility React Native apps — the
+ * counterpart of `SudobilityApp` in `@sudobility/building_blocks`.
  *
  * Composes essential providers (SafeArea, i18n, Theme, QueryClient, Toast)
- * in a deterministic order. Each provider slot is optional and replaceable via props.
+ * in the web's order. Each provider slot is optional and replaceable via props.
  * The entire provider stack is wrapped in an ErrorBoundary to catch initialization
  * errors and display a user-friendly fallback screen.
+ *
+ * What the web wrapper has and this one does not, because a native app has no
+ * equivalent: `HelmetProvider` (SEO), `BrowserRouter`/`RouterWrapper` and the
+ * route-based `PageTracker` (navigation is the app's own navigator). What it
+ * has and this one does not yet: a default `QueryClient` (pass
+ * `QueryClientProvider`), the `NetworkProvider` and the `InfoBanner`.
  */
-import React from 'react';
+import React, { Suspense } from 'react';
 import type { ComponentType, ReactNode } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { I18nextProvider } from 'react-i18next';
@@ -24,10 +31,26 @@ export interface SudobilityAppRNProps {
   children: ReactNode;
   /** Pre-configured i18n instance */
   i18n?: I18nInstance;
-  /** Optional custom ThemeProvider wrapper */
+  /**
+   * Custom ThemeProvider component (optional). Defaults to this package's
+   * `ThemeProvider`. The building blocks draw with or without it, so an app
+   * with a theme of its own can pass that provider here.
+   */
+  ThemeProvider?: ComponentType<{ children: ReactNode }>;
+  /** @deprecated Use `ThemeProvider` — the web's name for the same slot. */
   ThemeProviderComponent?: ComponentType<{ children: ReactNode }>;
-  /** Optional custom ToastProvider wrapper */
+  /**
+   * Custom ToastProvider component (optional). Defaults to this package's
+   * `ToastProvider`.
+   */
+  ToastProvider?: ComponentType<{ children: ReactNode }>;
+  /** @deprecated Use `ToastProvider` — the web's name for the same slot. */
   ToastProviderComponent?: ComponentType<{ children: ReactNode }>;
+  /**
+   * Fallback shown while a lazily loaded screen suspends (optional). When
+   * given, the content is wrapped in a `Suspense` boundary, as on the web.
+   */
+  LoadingFallback?: ComponentType;
   /** Query client provider (e.g., from @tanstack/react-query) */
   QueryClientProvider?: ComponentType<{ children: ReactNode }>;
   /** Optional additional providers to wrap around children */
@@ -48,10 +71,11 @@ export interface SudobilityAppRNProps {
  * 1. ErrorBoundary (outermost, catches provider initialization errors)
  * 2. SafeAreaProvider (always present)
  * 3. I18nextProvider (if `i18n` provided)
- * 4. ThemeProvider (or custom `ThemeProviderComponent`)
+ * 4. ThemeProvider (or the custom `ThemeProvider`)
  * 5. QueryClientProvider (if provided)
- * 6. ToastProvider (or custom `ToastProviderComponent`)
+ * 6. ToastProvider (or the custom `ToastProvider`)
  * 7. AppProviders (custom additional providers, innermost)
+ * 8. Suspense (if `LoadingFallback` provided) around the content
  *
  * @example
  * ```tsx
@@ -71,8 +95,11 @@ export interface SudobilityAppRNProps {
 export function SudobilityAppRN({
   children,
   i18n,
-  ThemeProviderComponent,
-  ToastProviderComponent,
+  ThemeProvider: ThemeProviderProp,
+  ThemeProviderComponent: ThemeProviderLegacy,
+  ToastProvider: ToastProviderProp,
+  ToastProviderComponent: ToastProviderLegacy,
+  LoadingFallback,
   QueryClientProvider,
   AppProviders,
   initialTheme,
@@ -80,7 +107,14 @@ export function SudobilityAppRN({
   ErrorFallbackComponent,
   onError,
 }: SudobilityAppRNProps) {
-  let content = <>{children}</>;
+  const ThemeProviderComponent = ThemeProviderProp ?? ThemeProviderLegacy;
+  const ToastProviderComponent = ToastProviderProp ?? ToastProviderLegacy;
+
+  let content = LoadingFallback ? (
+    <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
+  ) : (
+    <>{children}</>
+  );
 
   // Wrap with additional providers (innermost)
   if (AppProviders) {

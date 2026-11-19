@@ -31,6 +31,8 @@ export { createThemedStyles } from './src/utils';
 // Hooks
 export {
   useResponsive,
+  useIsRTL,
+  useRTLTextStyle,
   useNotchPosition,
   useOrientation,
   useSizeClasses,
@@ -65,6 +67,7 @@ export type { ErrorBoundaryProps } from './src/components/error';
 
 // i18n
 export {
+  initializeI18n,
   initializeI18nRN,
   getI18n,
   i18n,
