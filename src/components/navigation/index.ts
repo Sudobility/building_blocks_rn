@@ -7,6 +7,12 @@ export { createNavBarOptions } from './createNavBarOptions';
 export { NavBarTitle } from './NavBarTitle';
 export { NavBarActions } from './NavBarActions';
 export { HeaderBackButton } from './HeaderBackButton';
+export {
+  ResponsivePanel,
+  type ResponsivePanelProps,
+  DEFAULT_TABLET_BREAKPOINT,
+  DEFAULT_PANEL_WIDTH,
+} from './ResponsivePanel';
 export type { NavIconComponent, NavIconMap } from './types';
 
 // Re-export the framework-agnostic model vocabulary so RN consumers can get it
